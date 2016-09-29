@@ -41,26 +41,31 @@ function configure(context) {
       },
       checks: {
         isOwner: function() {
-          return this.viewerId === team.ownerId;
+          return this.viewerId === this.team.ownerId;
         },
         isMember: function() {
-          return this.viewerId === team.memberId;
+          return this.viewerId === this.team.memberId;
         }
       }
     } 
   }
 }
 const Authorizr = authorizr(configure);
+```
 
-// In server handler (before the graphql query is executed)
+Create a new authorizr instance using the context of the request (before the graphql query is executed). This allows the authorizr to
+setup all the checks for the user making the request.
+
+```js
 req.ctx.auth = new Authorizr(ctx);
+```
 
-// In resolve function
+Use the checks in an easily readable way in the resolve functions.
+
+```js
 resolve: function(id, args, { auth }) {
   if (auth.team(id).isOwner().isMember() || auth.user().isAdmin()) {
     // Do protected access
   }
 }
-
-
 ```
