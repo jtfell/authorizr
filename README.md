@@ -1,6 +1,6 @@
 # authorizr
 
-Minimalist authorisation mechanism for node servers :zap:. Designed for efficient use in graphql servers, authorizr allows
+Minimalist authorisation mechanism for node servers :zap:. Designed for efficient use in [GraphQL][graphql-js] servers, authorizr allows
 flexible and easy to reason about authoristion checks. By creating a new authorizr object per request, the implementation
 is free to pre-optimise as much or as little of the heavy lifting as desired.
 
@@ -8,15 +8,15 @@ is free to pre-optimise as much or as little of the heavy lifting as desired.
 
 `npm install authorizr`
 
-## Usage
+## Example Usage
 
 Create a new authorizr.
 
 ```js
-import authorizr from 'authorizr';
+import Authorizr from 'authorizr';
 
 // Create a new authorisation object
-const auth = new authorizr(context => {
+const auth = new Authorizr(context => {
   
   // Do any pre-calculation per instance (eg. get commonly used info from db)
   return new Promise((resolve, reject) => {
@@ -47,7 +47,7 @@ Create a new authorizr instance using the context of the request (before the gra
 setup all the checks for the user making the request.
 
 ```js
-req.ctx.auth = authorizr.createInstance(ctx);
+req.ctx.auth = authorizr.newRequest(ctx);
 ```
 
 Use the checks in an easily readable way in the resolve functions.
@@ -55,19 +55,58 @@ Use the checks in an easily readable way in the resolve functions.
 ```js
 resolve: function(id, args, { auth }) {
 
-  Promise.all([
-    auth.team(id)
+  auth.team(id)
       .isOwner()
       .isMember()
-      .verify(),
-      
-    auth.user()
-        .isAdmin()
-        .verify()
-  ]).then(res => 
-    if (res[0] || res[1]) {
+      .verify()
+      .then(res => 
+    if (res) {
       // Do protected access
     }
   }
 }
 ```
+
+## API
+
+#### `new Authorizr(setupFn [, options])`
+
+Create a new `Authorizr` instance.
+
+- *setupFn*: A function that accepts arbitrary inputs and does pre-optimisation for each request. Returns an arbitrary object, or a promise resolving to an arbitrary object, that will be passed to each individual authorisation check.
+
+- *options*: An optional object of options:
+  - *cache*: Default `true`. Set to false to disable caching each authorisation check.
+  
+#### `addEntity(name, checks)`
+
+Adds an entity for doing authorisation checks against.
+
+- *name*: The name of the function to be called when authorising requests.
+- *checks*: An object with check names mapping to functions for completing each check. Each check has the signature:
+  `check(globalCtx, entityArgs, checkArgs)`
+  - *globalCtx*: The result of the `setupFn` for this request.
+  - *entityArgs*: The arguments passed to the entity auth call (usually identifying the entity to perform the check against.
+  - *checkArgs*: The arguments passed to the individual auth check.
+
+#### `newRequest(context)`
+
+Creates a new context for authorisation calls. The `setupFn` will be called as part of this initialisation.
+
+- *context*: Any context needed for authorisation, passed directly into `setupFn`. Usually identification about who is making the request.
+
+#### `entity(entityArgs)`
+
+Identifies an entity for completing authorisation checks against and returns an object with chainable check methods from the `addEntity` call.
+
+- *entityArgs*: Arguments used to identify the entity.
+
+#### `check(checkArgs)`
+
+Completes an authorisation check using context from the request and entity calls. Th
+
+- *checkArgs*: Arguments used to pass in information needed for the check
+
+#### `verify()`
+
+Returns a promise resolving to true if *all* the checks passed, otherwising resolving to false.
