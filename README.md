@@ -16,7 +16,7 @@ Create a new authorizr.
 import Authorizr from 'authorizr';
 
 // Create a new authorisation object
-const auth = new Authorizr(context => {
+const authorizr = new Authorizr(context => {
   
   // Do any pre-calculation per instance (eg. get commonly used info from db)
   return new Promise((resolve, reject) => {
@@ -32,7 +32,7 @@ const auth = new Authorizr(context => {
   });
 });
 
-auth.addEntity(
+authorizr.addEntity(
   'team',
   {
     // Each check function is passed the pre-calculated global context, any arguments
