@@ -1,6 +1,6 @@
 # authorizr
 
-Minimalist authorisation mechanism for node servers :zap:. Designed for efficient use in [GraphQL][graphql-js] servers, authorizr allows
+Minimalist authorisation mechanism for node servers :zap:. Designed for efficient use in GraphQL servers, authorizr allows
 flexible and easy to reason about authoristion checks. By creating a new authorizr object per request, the implementation
 is free to pre-optimise as much or as little of the heavy lifting as desired.
 
