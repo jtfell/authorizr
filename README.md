@@ -15,57 +15,59 @@ Create a new authorizr.
 ```js
 import authorizr from 'authorizr';
 
-function configure(context) {
+// Create a new authorisation object
+const auth = new authorizr(context => {
+  
+  // Do any pre-calculation per instance (eg. get commonly used info from db)
+  return new Promise((resolve, reject) => {
+    const teams = db.findUserTeams(context.userId);
+    const perms = db.findUserPermissions(context.userId);
+    
+    Promise.all([teams, perms])
+      .then(res => {
+      
+        // Resolve the promise with data that is passed into every auth check
+        resolve({ userId: context.userId, teams: res[0], perms: res[1] })
+      });
+  });
+});
 
-  // Do any pre-authorisation optimisation here. 
-  // eg. construct auth object from database for easy access
-
-  return {
-    // Define the entities to check against (usually corresponding to models in your database)
-    user: {
-      init: function() {
-        // Save references to values needed for authorisation checks
-        this.viewerId = context.id;
-        this.admin = context.admin;
-      },
-      checks: {
-        isAdmin: function() {
-          return this.admin;
-        }
-      }
-    },
-    team: {
-      init: function(team) {
-        this.viewerId = context.id;
-        this.team = team;
-      },
-      checks: {
-        isOwner: function() {
-          return this.viewerId === this.team.ownerId;
-        },
-        isMember: function() {
-          return this.viewerId === this.team.memberId;
-        }
-      }
-    } 
+auth.addEntity(
+  'team',
+  {
+    // Each check function is passed the pre-calculated global context, any arguments
+    // passed into the entity and any arguments passed into the specific check
+    isOwner: (ctx, entityArgs, args) => ctx.teams[entityArgs.teamId].owner === ctx.userId,
+    isAdmin: (ctx, entityArgs, args) => ctx.teams[entityArgs.teamId].admin === ctx.userId
   }
-}
-const Authorizr = authorizr(configure);
+);
 ```
 
 Create a new authorizr instance using the context of the request (before the graphql query is executed). This allows the authorizr to
 setup all the checks for the user making the request.
 
 ```js
-req.ctx.auth = new Authorizr(ctx);
+req.ctx.auth = authorizr.createInstance(ctx);
 ```
 
 Use the checks in an easily readable way in the resolve functions.
 
 ```js
 resolve: function(id, args, { auth }) {
-  if (auth.team(id).isOwner().isMember() || auth.user().isAdmin()) {
-    // Do protected access
+
+  Promise.all([
+    auth.team(id)
+      .isOwner()
+      .isMember()
+      .verify(),
+      
+    auth.user()
+        .isAdmin()
+        .verify()
+  ]).then(res => 
+    if (res[0] || res[1]) {
+      // Do protected access
+    }
   }
 }
 ```
