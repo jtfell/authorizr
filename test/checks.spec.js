@@ -8,6 +8,20 @@ test.before(() => {
   });
 });
 
+test('throwing an error in a check will cause verify to resolve to false', async t => {
+  authorizr.addEntity(
+    'entity',
+    {
+      check: () => {
+        throw new Error('error!');
+      }
+    }
+  );
+
+  const auth = authorizr.newRequest({});
+  return auth.entity().check().verify().then(res => t.is(res, false));
+});
+
 test('returning false in single check will cause verify to resolve to false', async t => {
   authorizr.addEntity(
     'entity',
@@ -18,6 +32,30 @@ test('returning false in single check will cause verify to resolve to false', as
 
   const auth = authorizr.newRequest({});
   return auth.entity().check().verify().then(res => t.is(res, false));
+});
+
+test('returning a rejected promise will cause verify to resolve to false', async t => {
+  authorizr.addEntity(
+    'entity',
+    {
+      check: () => Promise.reject('error!')
+    }
+  );
+
+  const auth = authorizr.newRequest({});
+  return auth.entity().check().verify().then(res => t.is(res, false));
+});
+
+test('returning a promise that resolves to true will cause verify to resolve to true', async t => {
+  authorizr.addEntity(
+    'entity',
+    {
+      check: () => Promise.resolve(true)
+    }
+  );
+
+  const auth = authorizr.newRequest({});
+  return auth.entity().check().verify().then(res => t.is(res, true));
 });
 
 test('returning true in single check will cause verify to resolve to true', async t => {

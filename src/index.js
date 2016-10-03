@@ -48,10 +48,6 @@ Entity.prototype.__setEntityArgs = function (args) {
 };
 
 Entity.prototype.verify = function () {
-  if (this.__authorizr.__setupErr) {
-    // Pass the setup error back to the user
-    return Promise.reject(this.__authorizr.__setupErr);
-  }
   if (this.__numActiveChecks !== this.__activeChecks.length) {
     // If we haven't started all the checks, try again later
     return Promise.resolve().then(() => this.verify());
