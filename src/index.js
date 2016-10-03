@@ -1,16 +1,14 @@
+/**
+ * Constructor function
+ *
+ * @param {Function} setupFn
+ */
 function Authorizr(setupFn) {
   this.__setupFn = setupFn;
 }
 
 Authorizr.prototype.newRequest = function (input) {
-  this.__ready = false;
-  
-  Promise.resolve(this.__setupFn(input))
-    .then(res => {
-      this.__globalCtx = res;
-      this.__ready = true;
-    });
-
+  this.__setupResult = Promise.resolve(this.__setupFn(input));
   return this;
 };
 
@@ -20,7 +18,7 @@ Authorizr.prototype.addEntity = function (name, checks) {
 }
 
 Authorizr.prototype.__createEntityCallHandler = function (entity) {
-  return () => {
+  return function entityCallHandler() {
     entity.__setEntityArgs(arguments);
     return entity;
   };
@@ -29,51 +27,64 @@ Authorizr.prototype.__createEntityCallHandler = function (entity) {
 function Entity(name, checks, authorizr) {
   this.__name = name;
   this.__authorizr = authorizr;
-  this.__hasFailed = false;
-  this.entityArgs = null;
+  this.__entityArgs = null;
+  this.__activeChecks = [];
+  this.__numActiveChecks = 0;
+  this.__setupErr = null;
 
-  for (let check in checks) {
-    if (checks.hasOwnProperty(check)) {
+  Object.keys(checks).forEach(name => {
 
-      console.log(check, checks[check]);
-      const fn = checks[check];
+      const fn = checks[name];
 
       // Add error checking and account for promises in user-defined check
       const check = wrapCheck(fn);
       // Attach a generic check handler to catch the check calls
-      this[check] = this.__createCheckCallHandler(check);
-    }
-  }
+      this[name] = this.__createCheckCallHandler(check);
+  });
 }
 
 Entity.prototype.__setEntityArgs = function (args) {
   this.__entityArgs = args;
 };
 
+Entity.prototype.verify = function () {
+  if (this.__authorizr.__setupErr) {
+    // Pass the setup error back to the user
+    return Promise.reject(this.__authorizr.__setupErr);
+  }
+  if (this.__numActiveChecks !== this.__activeChecks.length) {
+    // If we haven't started all the checks, try again later
+    return Promise.resolve().then(() => this.verify());
+  }
+  return Promise.all(this.__activeChecks)
+    .then(checkResults => {
+      this.__numActiveChecks = 0;
+
+      // Start with true, then let any false value switch the final
+      // result to false
+      return checkResults.reduce((prev, result) => prev && result, true)
+    });
+};
+
 /**
  * Creates a check handler that allows chainable check calls.
  */
 Entity.prototype.__createCheckCallHandler = function (check) {
-  return () => {
-    if (this.__hasFailed) {
-      return this;
-    }
-
-    if (!this.__authorizr.__ready) {
-      // If the setup code isn't done yet, need to wait
-      //
-      // NOTE: This condition will always be caught by the first
-      //       check in the chain.
-
-    }
-
+  return function checkCallHandler() {
     const checkArgs = arguments;
-    // Call the wrapped user-defined check
-    const resPromise = check(this.__authorizr.__globalCtx, this.__entityArgs, checkArgs);
+    this.__numActiveChecks += 1;
+
+    this.__authorizr.__setupResult.then(globalCtx => {
+      // Call the wrapped user-defined check
+      this.__activeChecks.push(check(globalCtx, this.__entityArgs, checkArgs));
+    }).catch(err => {
+      this.__numActiveChecks -= 1;
+      this.__setupErr = err
+    });
 
     // Chainable
     return this;
-  };
+  }.bind(this);
 }
 
 function wrapCheck(fn) {

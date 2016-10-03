@@ -22,7 +22,7 @@ test('context returned via promise is passed to checks', async t => {
 test('rejected promise causes no checks to be run', async t => {
   const authorizr = new Authorizr(context => {
     return new Promise((resolve, reject) => {
-      reject();
+      throw new Error('error!');
     });
   });
 
