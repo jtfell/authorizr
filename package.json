@@ -1,6 +1,6 @@
 {
   "name": "authorizr",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Minimalist authorisation mechanism for node",
   "main": "lib/index.js",
   "scripts": {
