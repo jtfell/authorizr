@@ -5,6 +5,7 @@
   "main": "lib/index.js",
   "scripts": {
     "test": "ava --verbose test",
+    "lint": "eslint src/ test/",
     "coverage": "nyc ava test",
     "prepublish": "npm run test && BABEL_ENV=production babel --out-dir=lib src",
     "report": "nyc report --reporter=html",
@@ -47,6 +48,8 @@
     "babel-register": "^6.16.3",
     "coveralls": "^2.11.14",
     "eslint": "^3.7.0",
+    "eslint-config-airbnb-base": "^8.0.0",
+    "eslint-plugin-import": "^1.16.0",
     "nyc": "^8.3.0"
   }
 }

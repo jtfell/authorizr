@@ -1,8 +1,9 @@
-import Authorizr from '../src';
+/* eslint-disable import/no-extraneous-dependencies */
 import test from 'ava';
+import Authorizr from '../src';
 
 test('context returned via promise is passed to checks', async t => {
-  const authorizr = new Authorizr(context => {
+  const authorizr = new Authorizr(() => {
     return new Promise((resolve, reject) => {
       resolve({ foo: 'bar' });
     });
@@ -20,7 +21,7 @@ test('context returned via promise is passed to checks', async t => {
 });
 
 test('rejected promise causes no checks to be run', async t => {
-  const authorizr = new Authorizr(context => {
+  const authorizr = new Authorizr(() => {
     return new Promise((resolve, reject) => {
       throw new Error('error!');
     });
@@ -38,7 +39,7 @@ test('rejected promise causes no checks to be run', async t => {
 });
 
 test('context returned directly is passed to checks', async t => {
-  const authorizr = new Authorizr(context => {
+  const authorizr = new Authorizr(() => {
     return { foo: 'bar' };
   });
 
@@ -53,15 +54,15 @@ test('context returned directly is passed to checks', async t => {
   return auth.entity().check();
 });
 
-test('entityArgs are passed to checks', async t => {
-  const authorizr = new Authorizr(context => {
+test('entityId is passed to checks', async t => {
+  const authorizr = new Authorizr(() => {
     return { foo: 'bar' };
   });
 
   authorizr.addEntity(
     'entity',
     {
-      check: (ctx, entityArgs, args) => t.is(entityArgs[0], 'bar')
+      check: (ctx, entityId, args) => t.is(entityId, 'bar')
     }
   );
 
@@ -70,7 +71,7 @@ test('entityArgs are passed to checks', async t => {
 });
 
 test('checkArgs are passed to checks', async t => {
-  const authorizr = new Authorizr(context => {
+  const authorizr = new Authorizr(() => {
     return { foo: 'bar' };
   });
 
