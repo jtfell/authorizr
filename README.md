@@ -40,8 +40,8 @@ authorizr.addEntity(
   {
     // Each check function is passed the pre-calculated global context, any arguments
     // passed into the entity and any arguments passed into the specific check
-    isOwner: (ctx, entityArgs, args) => ctx.teams[entityArgs.teamId].owner === ctx.userId,
-    isAdmin: (ctx, entityArgs, args) => ctx.teams[entityArgs.teamId].admin === ctx.userId
+    isOwner: (ctx, entityId, args) => ctx.teams[entityId].owner === ctx.userId,
+    isAdmin: (ctx, entityId, args) => ctx.teams[entityId].admin === ctx.userId
   }
 );
 ```
@@ -60,8 +60,8 @@ resolve: function(id, args, { auth }) {
 
   auth.team(id)
       .isOwner()
-      .isMember()
-      .verify()
+      .isAdmin()
+      .any()
       .then(res => 
     if (res) {
       // Do protected access
@@ -89,7 +89,7 @@ Adds an entity for doing authorisation checks against.
 - *checks*: An object with check names mapping to functions for completing each check. Each check has the signature:
   `check(globalCtx, entityArgs, checkArgs)`
   - *globalCtx*: The result of the `setupFn` for this request.
-  - *entityArgs*: The arguments passed to the entity auth call (usually identifying the entity to perform the check against.
+  - *entityId*: The argument passed to the entity auth call (usually identifying the entity to perform the check against.
   - *checkArgs*: The arguments passed to the individual auth check.
 
 #### `newRequest(context)`
@@ -98,11 +98,11 @@ Creates a new context for authorisation calls. The `setupFn` will be called as p
 
 - *context*: Any context needed for authorisation, passed directly into `setupFn`. Usually identification about who is making the request.
 
-#### `entity(entityArgs)`
+#### `entity(entityId)`
 
 Identifies an entity for completing authorisation checks against and returns an object with chainable check methods from the `addEntity` call.
 
-- *entityArgs*: Arguments used to identify the entity.
+- *entityId*: Argument used to identify the entity.
 
 #### `check(checkArgs)`
 
@@ -110,6 +110,10 @@ Completes an authorisation check using context from the request and entity calls
 
 - *checkArgs*: Arguments used to pass in information needed for the check
 
-#### `verify()`
+#### `all()`
 
-Returns a promise resolving to true if *all* the checks passed, otherwising resolving to false.
+Returns a promise resolving to true if *all* the checks passed, otherwise resolving to false.
+
+#### `any()`
+
+Returns a promise resolving to true if *any* the checks passed, otherwise resolving to false.
