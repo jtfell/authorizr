@@ -3,7 +3,7 @@ import test from 'ava';
 import Authorizr from '../src';
 
 let authorizr;
-test.before(() => {
+test.beforeEach(() => {
   authorizr = new Authorizr(() => {
     return { foo: 'bar' };
   });
@@ -107,7 +107,8 @@ test('returning true in any check will cause any to resolve to true', async t =>
     'entity',
     {
       check: () => true,
-      check2: () => false
+      check2: () => false,
+      check3: () => false
     }
   );
 
@@ -115,6 +116,36 @@ test('returning true in any check will cause any to resolve to true', async t =>
   return auth.entity()
     .check()
     .check2()
+    .check3()
     .any()
     .then(res => t.is(res, true));
+});
+
+test('multiple entities from a single request should function correctly', async t => {
+  authorizr.addEntity(
+    'entity',
+    {
+      check: () => true,
+      check2: () => false
+    }
+  );
+
+  const auth = authorizr.newRequest({});
+  const pAny = auth.entity()
+    .check()
+    .check2()
+    .any()
+    .then(res => t.is(res, true));
+  const pAll1 = auth.entity()
+    .check()
+    .check2()
+    .all()
+    .then(res => t.is(res, false));
+  const pAll2 = auth.entity()
+    .check2()
+    .check()
+    .all()
+    .then(res => t.is(res, false));
+
+  return Promise.all([pAll1, pAll2, pAny]);
 });
