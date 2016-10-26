@@ -59,7 +59,6 @@ function Entity(name, checks) {
   this.__setupErr = null;
 
   this.__activeChecks = [];
-  this.__numActiveChecks = 0;
 
   Object.keys(checks).forEach(checkName => {
 
@@ -90,13 +89,9 @@ Entity.prototype.any = function () {
   if (this.__setupErr) {
     throw this.__setupErr;
   }
-  if (this.__numActiveChecks !== this.__activeChecks.length) {
-    // If we haven't started all the checks, try again later
-    return Promise.resolve().then(() => this.any());
-  }
   return Promise.all(this.__activeChecks)
     .then(checkResults => {
-      this.__numActiveChecks = 0;
+      this.__activeChecks = [];
 
       checkResults.forEach(res => {
         if (res instanceof Error) {
@@ -118,13 +113,9 @@ Entity.prototype.all = function () {
   if (this.__setupErr) {
     throw this.__setupErr;
   }
-  if (this.__numActiveChecks !== this.__activeChecks.length) {
-    // If we haven't started all the checks, try again later
-    return Promise.resolve().then(() => this.all());
-  }
   return Promise.all(this.__activeChecks)
     .then(checkResults => {
-      this.__numActiveChecks = 0;
+      this.__activeChecks = [];
 
       checkResults.forEach(res => {
         if (res instanceof Error) {
@@ -146,13 +137,14 @@ Entity.prototype.all = function () {
 Entity.prototype.__createCheckCallHandler = function (check) {
   return function checkCallHandler() {
     const checkArgs = arguments;
-    this.__numActiveChecks += 1;
 
-    this.__setupResult.then(globalCtx => {
-      this.__activeChecks.push(check(globalCtx, this.__entityId, checkArgs));
+    const newCheckRes = this.__setupResult.then(globalCtx => {
+      return check(globalCtx, this.__entityId, checkArgs);
     }).catch(err => {
-      this.__setupErr = err;
+      return err;
     });
+
+    this.__activeChecks.push(newCheckRes);
 
     // Chainable
     return this;
