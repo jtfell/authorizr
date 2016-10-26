@@ -9,7 +9,7 @@ test.beforeEach(() => {
   });
 });
 
-test('throwing an error in a check will cause any to resolve to false', async t => {
+test('throwing an error in a check will make the chain return a rejected promise', async t => {
   authorizr.addEntity(
     'entity',
     {
@@ -20,10 +20,10 @@ test('throwing an error in a check will cause any to resolve to false', async t 
   );
 
   const auth = authorizr.newRequest({});
-  return auth.entity().check().any().then(res => t.is(res, false));
+  return auth.entity().check().any().catch(err => t.truthy(err instanceof Error));
 });
 
-test('throwing an error in a check will cause all to resolve to false', async t => {
+test('throwing an error in a check will make the chain return a rejected promise', async t => {
   authorizr.addEntity(
     'entity',
     {
@@ -34,7 +34,7 @@ test('throwing an error in a check will cause all to resolve to false', async t 
   );
 
   const auth = authorizr.newRequest({});
-  return auth.entity().check().all().then(res => t.is(res, false));
+  return auth.entity().check().all().catch(err => t.truthy(err instanceof Error));
 });
 
 test('returning false in single check will cause all to resolve to false', async t => {
@@ -58,7 +58,7 @@ test('returning a rejected promise will cause all to resolve to false', async t 
   );
 
   const auth = authorizr.newRequest({});
-  return auth.entity().check().all().then(res => t.is(res, false));
+  return auth.entity().check().all().catch(res => t.truthy(res === 'error!'));
 });
 
 test('returning a promise that resolves to true will cause all to resolve to true', async t => {

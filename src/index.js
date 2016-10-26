@@ -27,7 +27,7 @@ Authorizr.prototype.newRequest = function (input) {
  *     function for entity
  */
 Authorizr.prototype.addEntity = function (name, checks) {
-  const entity = new Entity(name, checks, this);
+  const entity = new Entity(name, checks);
   this[name] = this.__createEntityCallHandler(entity);
 };
 
@@ -39,9 +39,9 @@ Authorizr.prototype.addEntity = function (name, checks) {
  */
 Authorizr.prototype.__createEntityCallHandler = function (entity) {
   return function entityCallHandler(entityId) {
-    entity.__setEntityId(entityId);
+    entity.__setContext(entityId, this.__setupResult);
     return entity;
-  };
+  }.bind(this);
 };
 
 /**
@@ -50,15 +50,16 @@ Authorizr.prototype.__createEntityCallHandler = function (entity) {
  *
  * @param {String} name
  * @param {Object} checks
- * @param {Authorizr} authorizr - Instance of authorizr
  */
-function Entity(name, checks, authorizr) {
-  this.__name = name;
-  this.__authorizr = authorizr;
+function Entity(name, checks) {
   this.__entityId = null;
+  this.__name = name;
+
+  this.__setupResult = null;
+  this.__setupErr = null;
+
   this.__activeChecks = [];
   this.__numActiveChecks = 0;
-  this.__setupErr = null;
 
   Object.keys(checks).forEach(checkName => {
 
@@ -76,8 +77,9 @@ function Entity(name, checks, authorizr) {
  *
  * @param {Any} id
  */
-Entity.prototype.__setEntityId = function (id) {
+Entity.prototype.__setContext = function (id, setupResult) {
   this.__entityId = id;
+  this.__setupResult = setupResult;
 };
 
 /**
@@ -85,6 +87,9 @@ Entity.prototype.__setEntityId = function (id) {
  * checks resolve to true.
  */
 Entity.prototype.any = function () {
+  if (this.__setupErr) {
+    throw this.__setupErr;
+  }
   if (this.__numActiveChecks !== this.__activeChecks.length) {
     // If we haven't started all the checks, try again later
     return Promise.resolve().then(() => this.any());
@@ -92,6 +97,12 @@ Entity.prototype.any = function () {
   return Promise.all(this.__activeChecks)
     .then(checkResults => {
       this.__numActiveChecks = 0;
+
+      checkResults.forEach(res => {
+        if (res instanceof Error) {
+          throw res;
+        }
+      });
 
       // Start with false, then let any true value switch the final
       // result to true
@@ -104,6 +115,9 @@ Entity.prototype.any = function () {
  * checks resolve to true.
  */
 Entity.prototype.all = function () {
+  if (this.__setupErr) {
+    throw this.__setupErr;
+  }
   if (this.__numActiveChecks !== this.__activeChecks.length) {
     // If we haven't started all the checks, try again later
     return Promise.resolve().then(() => this.all());
@@ -111,6 +125,12 @@ Entity.prototype.all = function () {
   return Promise.all(this.__activeChecks)
     .then(checkResults => {
       this.__numActiveChecks = 0;
+
+      checkResults.forEach(res => {
+        if (res instanceof Error) {
+          throw res;
+        }
+      });
 
       // Start with true, then let any false value switch the final
       // result to false
@@ -128,11 +148,9 @@ Entity.prototype.__createCheckCallHandler = function (check) {
     const checkArgs = arguments;
     this.__numActiveChecks += 1;
 
-    this.__authorizr.__setupResult.then(globalCtx => {
-      // Call the wrapped user-defined check
+    this.__setupResult.then(globalCtx => {
       this.__activeChecks.push(check(globalCtx, this.__entityId, checkArgs));
     }).catch(err => {
-      this.__numActiveChecks -= 1;
       this.__setupErr = err;
     });
 
@@ -140,6 +158,7 @@ Entity.prototype.__createCheckCallHandler = function (check) {
     return this;
   }.bind(this);
 };
+
 
 /**
  * Helper function to wrap check functions in a try/catch and
@@ -155,9 +174,12 @@ function wrapCheck(fn) {
       try {
         const res = fn(globalCtx, entityId, checkArgs);
         const p = Promise.resolve(res);
-        return p.then(result => resolve(result)).catch(() => resolve(false));
+        return p.then(result => resolve(result))
+          .catch(err => resolve(err));
+
       } catch (e) {
-        return resolve(false);
+        // Resolve the error to be handled in the final call of the chain
+        return resolve(e);
       }
 
     });
