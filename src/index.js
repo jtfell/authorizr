@@ -27,8 +27,7 @@ Authorizr.prototype.newRequest = function (input) {
  *     function for entity
  */
 Authorizr.prototype.addEntity = function (name, checks) {
-  const entity = new Entity(name, checks);
-  this[name] = this.__createEntityCallHandler(entity);
+  this[name] = this.__createEntityCallHandler(name, checks);
 };
 
 /**
@@ -37,8 +36,9 @@ Authorizr.prototype.addEntity = function (name, checks) {
  *
  * @param {Entity} entity
  */
-Authorizr.prototype.__createEntityCallHandler = function (entity) {
+Authorizr.prototype.__createEntityCallHandler = function (name, checks) {
   return function entityCallHandler(entityId) {
+    const entity = new Entity(name, checks);
     entity.__setContext(entityId, this.__setupResult);
     return entity;
   }.bind(this);

@@ -4,11 +4,9 @@ import Authorizr from '../src';
 
 test('context returned via promise is passed to checks', async t => {
   const authorizr = new Authorizr(() => {
-    return new Promise(function(resolve, reject) {
-      setTimeout(function () {
-        resolve({ foo: 'bar' });
-      }, 250);
-    });
+    return new Promise((resolve, reject) =>
+        setTimeout(() => resolve({ foo: 'bar' }), 250)
+    );
   });
 
   authorizr.addEntity(
