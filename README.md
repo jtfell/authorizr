@@ -7,6 +7,8 @@ Minimalist authorisation mechanism for node servers :zap:. Designed for efficien
 flexible and easy to reason about authoristion checks. By creating a new authorizr object per request, the implementation
 is free to pre-optimise as much or as little of the heavy lifting as desired.
 
+I've written a little on the idea behind this library on [my blog](https://jtfell.com/blog/posts/2017-02-06-authorisation-revisited.html).
+
 ## Install
 
 `npm install authorizr`
